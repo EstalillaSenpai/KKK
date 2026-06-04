@@ -4,5 +4,10 @@
       "source": "/(.*)",
       "destination": "/api/server"
     }
-  ]
+  ],
+  "functions": {
+    "api/server.ts": {
+      "includeFiles": "dist/server/**"
+    }
+  }
 }
