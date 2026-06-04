@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "http";
-import server from "../src/server";
+import server from "../src/server.ts";
 
 function readRawBody(req: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
