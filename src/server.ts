@@ -4,8 +4,7 @@ import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { db, increment, serverTimestamp, Timestamp } from "./lib/firebase";
 import { getService } from "./lib/api/services";
-import { sendAdminNewBookingNotification } from "./lib/email";
-import type { Booking, ServiceId } from "./lib/api/types";
+import type { ServiceId } from "./lib/api/types";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -218,7 +217,7 @@ async function handleCreateBooking(request: Request): Promise<Response> {
     };
   });
 
-  const bookingData: Booking = {
+  const bookingData = {
     id: ids.bookingId,
     address,
     customerId: ids.customerId,
@@ -237,10 +236,6 @@ async function handleCreateBooking(request: Request): Promise<Response> {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-
-  sendAdminNewBookingNotification(bookingData).catch((error) => {
-    console.error("Failed to send admin booking notification:", error);
-  });
 
   return jsonResponse({ ok: true, data: bookingData });
 }
