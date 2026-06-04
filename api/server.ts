@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "http";
-import server from "../src/server.ts";
+import server from "../dist/server/server.js";
 
 function readRawBody(req: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -26,7 +26,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const response = await server.fetch(request, process.env, {});
 
     res.statusCode = response.status;
-    response.headers.forEach((value, key) => res.setHeader(key, value));
+    response.headers.forEach((value: string, key: string) => res.setHeader(key, value));
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     res.end(buffer);
