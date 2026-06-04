@@ -1,17 +1,4 @@
-import { storage, uid, delay } from "./storage";
-import { customersApi } from "./customers";
-import { getService } from "./services";
 import type { Booking, BookingStatus, Result, ServiceId } from "./types";
-
-const KEY = "bookings";
-
-function all(): Booking[] {
-  return storage.read<Booking[]>(KEY, []);
-}
-
-function persist(list: Booking[]): void {
-  storage.write(KEY, list);
-}
 
 export interface CreateBookingInput {
   serviceId: ServiceId;
@@ -22,60 +9,62 @@ export interface CreateBookingInput {
   customer: { name: string; email: string; phone: string };
 }
 
+async function requestJson<T>(url: string, options: RequestInit): Promise<T> {
+  const response = await fetch(url, {
+    headers: { "content-type": "application/json" },
+    ...options,
+  });
+  const body = await response.json();
+  if (!response.ok) {
+    throw new Error(body?.error ?? "Booking service failure");
+  }
+  return body as T;
+}
+
 export const bookingsApi = {
   async list(filter?: { status?: BookingStatus; customerId?: string }): Promise<Booking[]> {
-    let items = all().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    if (filter?.status) items = items.filter((b) => b.status === filter.status);
-    if (filter?.customerId) items = items.filter((b) => b.customerId === filter.customerId);
-    return delay(items);
+    const params = new URLSearchParams();
+    if (filter?.status) params.set("status", filter.status);
+    if (filter?.customerId) params.set("customerId", filter.customerId);
+    const url = `/api/bookings?${params.toString()}`;
+    const body = await requestJson<{ ok: true; data: Booking[] }>(url, { method: "GET" });
+    return body.data;
   },
 
   async get(id: string): Promise<Booking | null> {
-    return delay(all().find((b) => b.id === id) ?? null);
+    try {
+      const body = await requestJson<{ ok: true; data: Booking }>(`/api/bookings/${id}`, { method: "GET" });
+      return body.data;
+    } catch {
+      return null;
+    }
   },
 
   async create(input: CreateBookingInput): Promise<Result<Booking>> {
-    const service = getService(input.serviceId);
-    if (!service) return delay({ ok: false, error: "Unknown service" });
-
-    const customerResult = await customersApi.upsert(input.customer);
-    if (!customerResult.ok) return { ok: false, error: customerResult.error };
-
-    const now = new Date().toISOString();
-    const booking: Booking = {
-      id: uid("bkg"),
-      customerId: customerResult.data.id,
-      customer: input.customer,
-      serviceId: service.id,
-      serviceName: service.name,
-      price: service.price,
-      date: input.date,
-      time: input.time,
-      address: input.address,
-      notes: input.notes,
-      status: "pending",
-      createdAt: now,
-      updatedAt: now,
-    };
-    persist([booking, ...all()]);
-    return delay({ ok: true, data: booking });
+    try {
+      const body = await requestJson<{ ok: true; data: Booking }>("/api/bookings", {
+        method: "POST",
+        body: JSON.stringify(input),
+      });
+      return { ok: true, data: body.data };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "Booking failed" };
+    }
   },
 
   async updateStatus(id: string, status: BookingStatus): Promise<Result<Booking>> {
-    const list = all();
-    const idx = list.findIndex((b) => b.id === id);
-    if (idx === -1) return delay({ ok: false, error: "Booking not found" });
-    const updated: Booking = { ...list[idx], status, updatedAt: new Date().toISOString() };
-    list[idx] = updated;
-    persist(list);
-    return delay({ ok: true, data: updated });
+    try {
+      const body = await requestJson<{ ok: true; data: Booking }>(`/api/bookings/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status }),
+      });
+      return { ok: true, data: body.data };
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : "Status update failed" };
+    }
   },
 
   async remove(id: string): Promise<Result<true>> {
-    const list = all();
-    const next = list.filter((b) => b.id !== id);
-    if (next.length === list.length) return delay({ ok: false, error: "Booking not found" });
-    persist(next);
-    return delay({ ok: true, data: true });
+    return { ok: false, error: "Booking removal is not implemented" };
   },
 };
