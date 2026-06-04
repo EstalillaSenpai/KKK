@@ -42,17 +42,16 @@ const trustPoints = [
 ];
 
 const stats = [
-  { value: 2500, suffix: "+", label: "Customers Served" },
-  { value: 8000, suffix: "+", label: "Cleaning Sessions" },
-  { value: 98, suffix: "%", label: "Satisfaction Rate" },
-  { value: 30, suffix: " min", label: "Avg. Response Time" },
+  { value: 129, suffix: "+", label: "Customers Served" },
+  { value: 180, suffix: "+", label: "Cleaning Sessions" },
+  { value: 93.6, suffix: "%", label: "Satisfaction Rate" },
+  { value: 20, suffix: " min", label: "Avg. Response Time" },
 ];
 
 const team = [
-  { name: "Kris K. King", role: "Founder & CEO", initials: "KK" },
-  { name: "Marco Dela Cruz", role: "Operations Manager", initials: "MD" },
-  { name: "Liza Mendoza", role: "Customer Support Lead", initials: "LM" },
-  { name: "Cleaning Specialists", role: "Field Technicians Team", initials: "CS" },
+  { name: "Joaquin Angelo Estalilla", role: "Founder & CEO", initials: "KK" },
+  { name: "Hezekiah Gutay", role: "Operations Manager", initials: "MD" },
+  { name: "Rhome Saringayat", role: "Customer Support Lead", initials: "LM" },
 ];
 
 const faqs = [
@@ -212,7 +211,7 @@ function Team() {
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Meet the Team</h2>
           <p className="mt-3 text-muted-foreground">The people behind every spotless result.</p>
         </div>
-        <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {team.map((m, i) => (
             <Reveal key={m.name} delay={i * 80}>
               <div className="group rounded-2xl bg-card border border-border p-6 text-center shadow-[var(--shadow-card)] hover:-translate-y-1.5 hover:shadow-[var(--shadow-soft)] hover:border-primary/40 transition-all duration-300 h-full">
@@ -476,7 +475,7 @@ function Contact() {
               <h2 className="text-3xl md:text-4xl font-bold">Ready to book your clean?</h2>
               <p className="mt-4 opacity-90">Tell us what needs refreshing — we'll respond within the hour.</p>
               <div className="mt-8 space-y-3 text-sm">
-                <div className="flex items-center gap-3"><Phone size={18} /> +63 900 000 0000</div>
+                <div className="flex items-center gap-3"><Phone size={18} /> +63 906 236 7351</div>
                 <div className="flex items-center gap-3"><Mail size={18} /> hello@kkkcleaning.ph</div>
                 <div className="flex items-center gap-3"><MapPin size={18} /> Serving your city, 7 days a week</div>
               </div>
