@@ -4,6 +4,8 @@ import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
 import { db, increment, serverTimestamp, Timestamp } from "./lib/firebase";
 import { getService } from "./lib/api/services";
+import { sendAdminNewBookingNotification } from "./lib/email";
+import type { Booking, ServiceId } from "./lib/api/types";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -158,6 +160,7 @@ async function handleCreateBooking(request: Request): Promise<Response> {
     return errorResponse("Unknown service", 400);
   }
 
+  const serviceIdValue = String(serviceId) as ServiceId;
   const email = String(customer.email).trim().toLowerCase();
   const customerQuery = await db.collection("customers").where("email", "==", email).limit(1).get();
   const isNewCustomer = customerQuery.empty;
@@ -215,7 +218,7 @@ async function handleCreateBooking(request: Request): Promise<Response> {
     };
   });
 
-  const bookingData = {
+  const bookingData: Booking = {
     id: ids.bookingId,
     address,
     customerId: ids.customerId,
@@ -224,7 +227,7 @@ async function handleCreateBooking(request: Request): Promise<Response> {
       email,
       phone: customer.phone,
     },
-    serviceId,
+    serviceId: serviceIdValue,
     serviceName: service.name,
     price: service.price,
     date,
@@ -234,6 +237,10 @@ async function handleCreateBooking(request: Request): Promise<Response> {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+
+  sendAdminNewBookingNotification(bookingData).catch((error) => {
+    console.error("Failed to send admin booking notification:", error);
+  });
 
   return jsonResponse({ ok: true, data: bookingData });
 }
