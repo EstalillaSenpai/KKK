@@ -1,13 +1,16 @@
 {
+  "functions": {
+    "api/server.ts": {
+      "includeFiles": [
+        "dist/server/**",
+        "dist/client/**"
+      ]
+    }
+  },
   "rewrites": [
     {
       "source": "/(.*)",
       "destination": "/api/server"
     }
-  ],
-  "functions": {
-    "api/server.ts": {
-      "includeFiles": "dist/server/**"
-    }
-  }
+  ]
 }
