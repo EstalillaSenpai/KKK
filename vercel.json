@@ -1,10 +1,7 @@
 {
   "functions": {
     "api/server.ts": {
-      "includeFiles": [
-        "dist/server/**",
-        "dist/client/**"
-      ]
+      "includeFiles": "dist/**"
     }
   },
   "rewrites": [
