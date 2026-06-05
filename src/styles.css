@@ -1,8 +1,5 @@
-@import "tailwindcss" source(none);
-@source "../src";
+@import "tailwindcss";
 @import "tw-animate-css";
-
-@custom-variant dark (&:is(.dark *));
 
 /*
  * Design system definition.
@@ -142,13 +139,16 @@
     border-color: var(--color-border);
   }
 
+  input,
+  textarea,
+  select {
+    outline: none;
+  }
+
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    scroll-behavior: smooth;
   }
-  html { scroll-behavior: smooth; }
 }
 
 @keyframes fade-in-up {
@@ -188,10 +188,9 @@
 section[id] { scroll-margin-top: 80px; }
 
 /* Consistent focus ring */
-:where(a, button, [role="button"], input, select, textarea):focus-visible {
+:where(a, button, [role="button"]):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
-  border-radius: 6px;
 }
 
 /* Subtle hover lift utility */

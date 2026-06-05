@@ -1,21 +1,17 @@
-import admin from "firebase-admin";
+import { initializeApp } from "firebase/app";
+import { getFirestore } from "firebase/firestore";
 
-const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-if (!serviceAccount) {
-  throw new Error("Missing FIREBASE_SERVICE_ACCOUNT_KEY environment variable.");
-}
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+};
 
-const credential = typeof serviceAccount === "string"
-  ? JSON.parse(serviceAccount)
-  : serviceAccount;
+const app = initializeApp(firebaseConfig);
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert(credential),
-  });
-}
+export const db = getFirestore(app);
 
-export const db = admin.firestore();
-export const serverTimestamp = admin.firestore.FieldValue.serverTimestamp();
-export const increment = admin.firestore.FieldValue.increment;
-export const Timestamp = admin.firestore.Timestamp;
+console.log("API KEY:", import.meta.env.VITE_FIREBASE_API_KEY);

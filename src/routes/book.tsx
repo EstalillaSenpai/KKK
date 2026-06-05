@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import React from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Sparkles, Sofa, BedDouble, Wind, Brush, Calendar, Clock, MapPin,
   User, Phone, Mail, NotebookPen, CheckCircle2, ArrowRight, ArrowLeft, X,
@@ -39,7 +40,34 @@ function BookPage() {
   const [errors, setErrors] = useState<Errors>({});
   const [submitted, setSubmitted] = useState(false);
 
+  console.log("submitted:", submitted);
+
   const service = useMemo(() => SERVICES.find(s => s.id === serviceId), [serviceId]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log("ALIVE");
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+  
+  useEffect(() => {
+    const log = (e: Event) => {
+      if (e.type === "submit") {
+        console.log("🔥 GLOBAL SUBMIT EVENT FIRED", e.target);
+      }
+    };
+
+    document.addEventListener("submit", log);
+
+    return () => document.removeEventListener("submit", log);
+  }, []);
+
+  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
+    console.log("CLICK:", e.target);
+  };
+
   const today = new Date().toISOString().split("T")[0];
 
   const validate = (): Errors => {
@@ -54,22 +82,37 @@ function BookPage() {
     return e;
   };
 
-  const submit = () => {
+  const submit = async () => {
+    console.log("SUBMIT START");
+
     const e = validate();
     setErrors(e);
     if (Object.keys(e).length > 0) return;
-    void bookingsApi
-      .create({
-        serviceId: serviceId as "sofa" | "mattress" | "rug" | "full",
-        date,
-        time,
-        address,
-        notes,
-        customer: { name, email, phone },
-      })
-      .then((res) => { if (res.ok) setSubmitted(true); });
+
+    const res = await bookingsApi.create({
+      serviceId: serviceId as "sofa" | "mattress" | "rug" | "full",
+      date,
+      time,
+      address,
+      notes,
+      customer: { name, email, phone },
+    });
+
+    console.log("🔥 FIREBASE RESULT:", res); // IMPORTANT
+
+    if (!res.ok) {
+      console.error("❌ FIREBASE ERROR:", res.error);
+      return;
+    }
+
+    console.log("✅ SUCCESS - SETTING SUBMITTED");
+    setSubmitted(true);
   };
-  const onSubmit = (ev: React.FormEvent) => { ev.preventDefault(); submit(); };
+  
+  const onSubmit = async (ev: React.SyntheticEvent<HTMLFormElement>) => {
+    ev.preventDefault();
+    await submit();
+  };
 
   const reset = () => {
     setServiceId(""); setDate(""); setTime(""); setAddress("");
@@ -191,7 +234,7 @@ function BookPage() {
             </div>
 
             {/* Contact */}
-            <div>
+            <div onClick={handleClick}>
               <h2 className="text-lg font-semibold flex items-center gap-2"><User size={18} className="text-primary" /> Contact Information</h2>
               <p className="text-sm text-muted-foreground mt-1">So we can confirm your booking.</p>
               <div className="mt-5 grid sm:grid-cols-2 gap-5">
@@ -225,6 +268,13 @@ function BookPage() {
                 placeholder="Tell us more about your space or special requests..."
                 className="mt-3 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 resize-none" />
             </div>
+
+            <button 
+                type="submit"
+                className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-full py-3.5 font-semibold text-primary-foreground hover:opacity-90 transition"
+                style={{ background: "var(--gradient-primary)" }}>
+                Confirm Booking <ArrowRight size={16} />
+              </button>
           </form>
 
           {/* Summary */}
@@ -249,16 +299,13 @@ function BookPage() {
                 </span>
               </div>
 
-              <button type="button" onClick={submit}
-                className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-full py-3.5 font-semibold text-primary-foreground hover:opacity-90 transition"
-                style={{ background: "var(--gradient-primary)" }}>
-                Confirm Booking <ArrowRight size={16} />
-              </button>
+              
               <p className="mt-3 text-[11px] text-center text-muted-foreground">No payment required now. Pay after service.</p>
             </div>
           </aside>
         </div>
       </section>
+
 
       {submitted && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-foreground/40 backdrop-blur-sm p-4 animate-fade-in-up" onClick={reset}>
