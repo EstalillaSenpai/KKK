@@ -1,4 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "http";
+
+// @ts-ignore
 import server from "../dist/server/server.js";
 
 function readRawBody(req: IncomingMessage): Promise<Buffer> {
