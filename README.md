@@ -455,29 +455,156 @@ Possible Causes:
 
 ---
 
-# 25. Deployment Guide
+### Server-side error: "Missing FIREBASE_SERVICE_ACCOUNT_KEY"
 
-## Local Development
+If you see an error like:
 
-Install dependencies:
+```
+Missing FIREBASE_SERVICE_ACCOUNT_KEY environment variable.
+```
 
-npm install
+Reason:
+- The server-side code (used for SSR or admin APIs) expects a Firebase service account to be present as an environment variable. Vite will import server modules during dev/build which can cause this error early.
 
-Run development server:
+Fixes:
+- If you're only working on UI/UX, avoid this by building and serving `dist/client` (see "Run only the UI").
+- To work with server features, set the `FIREBASE_SERVICE_ACCOUNT_KEY` or `FIREBASE_SERVICE_ACCOUNT_KEY_B64` environment variable as described above.
 
+Example (bash):
+
+```bash
+export FIREBASE_SERVICE_ACCOUNT_KEY="$(cat /path/to/serviceAccount.json)"
 npm run dev
+```
 
-Build production version:
+Or base64-encoded:
 
-npm run build
+```bash
+export FIREBASE_SERVICE_ACCOUNT_KEY_B64="$(base64 -w0 /path/to/serviceAccount.json)"
+npm run dev
+```
 
 ---
 
-## Hosting Options
+# 25. Deployment & Developer Guide
 
-* Vercel
-* Netlify
-* GitHub Pages
+This section explains how to set up the project for development, how to run only the UI (client-side) without loading server-side modules like Firebase Admin, how to prepare for production, and common deployment options.
+
+## Developer checklist (quick)
+
+- Install dependencies
+- Set required environment variables for server features (optional if you only run the UI)
+- Build the project (to produce `dist/client`)
+- Serve `dist/client` statically to view the UI-only bundle locally
+
+## Local development (full app)
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Run development server (this starts Vite and may load server-side modules used for SSR):
+
+```bash
+npm run dev
+```
+
+Notes:
+- The server-side code (e.g. `src/lib/firebase.ts`) may require environment variables (see below). If those are not present, server-side rendering will throw and the dev server may show an overlay error.
+- For day-to-day UI work you usually don't need full server features; see "Run UI-only" below.
+
+## Run only the UI (recommended for pure UI/UX work)
+
+If you want to work on the client bundle (styles, components, static pages) without starting the server or triggering server-only imports (like `firebase-admin`), build the client bundle and serve the static `dist/client` directory. This avoids Node server imports and is quick for visual work.
+
+Steps:
+
+1. Build the project:
+
+```bash
+npm run build
+```
+
+2. Serve the client bundle (pick one):
+
+- Using Node (npx http-server):
+
+```bash
+npx http-server dist/client -p 5000
+# open http://localhost:5000
+```
+
+- Using `serve` (another popular static server):
+
+```bash
+npx serve dist/client -l 5000
+# open http://localhost:5000
+```
+
+- Using Python (if you have Python 3):
+
+```bash
+cd dist/client
+python -m http.server 5000
+# open http://localhost:5000
+```
+
+This will host the client-side SPA only and will not execute server-side code that requires secrets.
+
+## Environment variables (server-side)
+
+The project may require a Firebase service account for admin operations. The server expects an environment variable named `FIREBASE_SERVICE_ACCOUNT_KEY` (raw JSON) or `FIREBASE_SERVICE_ACCOUNT_KEY_B64` (base64-encoded JSON), depending on the code in `src/lib/firebase.ts`.
+
+Set the raw JSON in bash (development):
+
+```bash
+export FIREBASE_SERVICE_ACCOUNT_KEY="$(cat /path/to/serviceAccount.json)"
+npm run dev
+```
+
+Or set a base64-encoded variable to avoid quoting/newline issues:
+
+```bash
+export FIREBASE_SERVICE_ACCOUNT_KEY_B64="$(base64 -w0 /path/to/serviceAccount.json)"
+npm run dev
+```
+
+If you use `serviceAccount.json` file locally for convenience, add it to `.gitignore`:
+
+```bash
+echo "serviceAccount.json" >> .gitignore
+```
+
+Important notes:
+- Never commit real secrets to the repository. Use your host/CI secret storage for production (Vercel/Netlify/Cloud consoles etc.).
+- For production deployments, set the secret via the host's secret manager or environment variable configuration.
+
+## Production build and preview
+
+Build the production bundles:
+
+```bash
+npm run build
+```
+
+Preview (Vite preview attempts to run a server and may pick up server code):
+
+```bash
+npm run preview
+```
+
+If `npm run preview` triggers server-side imports you don't want locally, use the static-serving instructions above to preview the client.
+
+## Hosting options
+
+Pick a static host for the client-only deployment, or a platform that supports Node for server features:
+
+- Static client only: Vercel (static site), Netlify, GitHub Pages, Amazon S3 + CloudFront
+- Full stack / server: Vercel (Serverless functions), Cloud Run, Heroku, DigitalOcean App Platform
+
+When deploying server features, make sure to configure your secrets in the host's environment variable / secret UI.
 
 ---
 
@@ -517,3 +644,5 @@ Customer Support and Administrative Lead
 KKK Cleaning Services demonstrates how technology can be utilized to improve traditional service-based businesses. Through online booking, administrative management, and customer-focused features, the platform provides a foundation for efficient and scalable cleaning service operations.
 
 **KKK Cleaning Services — From Kadiri to Sarap.**
+
+
