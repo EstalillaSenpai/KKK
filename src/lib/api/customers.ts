@@ -1,49 +1,158 @@
-import { storage, uid, delay } from "./storage";
 import type { Customer, Result } from "./types";
 
-const KEY = "customers";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  getDoc,
+  doc,
+  query,
+  where,
+  updateDoc,
+  Timestamp,
+} from "firebase/firestore";
 
-function all(): Customer[] {
-  return storage.read<Customer[]>(KEY, []);
+import { db } from "@/lib/firebase";
+
+const COLLECTION = "customers";
+
+/**
+ * Convert Firestore doc → Customer
+ */
+function mapDoc(id: string, data: any): Customer {
+  return {
+    id,
+    name: data.name,
+    email: data.email,
+    phone: data.phone,
+    createdAt: data.createdAt,
+  };
 }
 
 export const customersApi = {
+  /**
+   * LIST all customers
+   */
   async list(): Promise<Customer[]> {
-    return delay(all());
+    try {
+      const snap = await getDocs(collection(db, COLLECTION));
+
+      return snap.docs.map((d) =>
+        mapDoc(d.id, d.data())
+      );
+    } catch {
+      return [];
+    }
   },
 
+  /**
+   * GET customer by ID
+   */
   async get(id: string): Promise<Customer | null> {
-    return delay(all().find((c) => c.id === id) ?? null);
+    try {
+      const snap = await getDoc(doc(db, COLLECTION, id));
+
+      if (!snap.exists()) return null;
+
+      return mapDoc(snap.id, snap.data());
+    } catch {
+      return null;
+    }
   },
 
+  /**
+   * FIND customer by email
+   */
   async findByEmail(email: string): Promise<Customer | null> {
-    const e = email.trim().toLowerCase();
-    return delay(all().find((c) => c.email.toLowerCase() === e) ?? null);
+    try {
+      const q = query(
+        collection(db, COLLECTION),
+        where("email", "==", email.trim().toLowerCase())
+      );
+
+      const snap = await getDocs(q);
+
+      if (snap.empty) return null;
+
+      const docSnap = snap.docs[0];
+
+      return mapDoc(docSnap.id, docSnap.data());
+    } catch {
+      return null;
+    }
   },
 
-  /** Find by email or create a new customer record. */
+  /**
+   * UPSERT (find or create customer)
+   */
   async upsert(input: {
     name: string;
     email: string;
     phone: string;
   }): Promise<Result<Customer>> {
-    const list = all();
-    const email = input.email.trim().toLowerCase();
-    const existing = list.find((c) => c.email.toLowerCase() === email);
-    if (existing) {
-      const updated: Customer = { ...existing, name: input.name, phone: input.phone };
-      const next = list.map((c) => (c.id === existing.id ? updated : c));
-      storage.write(KEY, next);
-      return delay({ ok: true, data: updated });
+    try {
+      const email = input.email.trim().toLowerCase();
+
+      const q = query(
+        collection(db, COLLECTION),
+        where("email", "==", email)
+      );
+
+      const snap = await getDocs(q);
+
+      // ✅ EXISTS → UPDATE
+      if (!snap.empty) {
+        const existingDoc = snap.docs[0];
+        const ref = doc(db, COLLECTION, existingDoc.id);
+
+        const updated = {
+          name: input.name,
+          phone: input.phone,
+        };
+
+        await updateDoc(ref, updated);
+
+        const updatedSnap = await getDoc(ref);
+
+        return {
+          ok: true,
+          data: mapDoc(
+            updatedSnap.id,
+            updatedSnap.data()
+          ),
+        };
+      }
+
+      // 🆕 CREATE NEW
+      const now = new Date().toISOString();
+
+      const createdData = {
+        name: input.name,
+        email,
+        phone: input.phone,
+        createdAt: now,
+      };
+
+      const docRef = await addDoc(
+        collection(db, COLLECTION),
+        createdData
+      );
+
+      return {
+        ok: true,
+        data: {
+          id: docRef.id,
+          ...createdData,
+        },
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Customer upsert failed",
+      };
     }
-    const created: Customer = {
-      id: uid("cus"),
-      name: input.name,
-      email: input.email,
-      phone: input.phone,
-      createdAt: new Date().toISOString(),
-    };
-    storage.write(KEY, [created, ...list]);
-    return delay({ ok: true, data: created });
   },
 };

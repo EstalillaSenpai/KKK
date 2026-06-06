@@ -1,3 +1,5 @@
+import { collection, addDoc, getDocs, doc, getDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import type { Booking, BookingStatus, Result, ServiceId } from "./types";
 
 export interface CreateBookingInput {
@@ -9,62 +11,42 @@ export interface CreateBookingInput {
   customer: { name: string; email: string; phone: string };
 }
 
-async function requestJson<T>(url: string, options: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    headers: { "content-type": "application/json" },
-    ...options,
-  });
-  const body = await response.json();
-  if (!response.ok) {
-    throw new Error(body?.error ?? "Booking service failure");
-  }
-  return body as T;
-}
+const bookingsRef = collection(db, "bookings");
 
 export const bookingsApi = {
-  async list(filter?: { status?: BookingStatus; customerId?: string }): Promise<Booking[]> {
-    const params = new URLSearchParams();
-    if (filter?.status) params.set("status", filter.status);
-    if (filter?.customerId) params.set("customerId", filter.customerId);
-    const url = `/api/bookings?${params.toString()}`;
-    const body = await requestJson<{ ok: true; data: Booking[] }>(url, { method: "GET" });
-    return body.data;
+  async create(input: CreateBookingInput): Promise<Result<Booking>> {
+    try {
+      const docRef = await addDoc(bookingsRef, {
+        ...input,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+
+      const snapshot = await getDoc(docRef);
+
+      return {
+        ok: true,
+        data: { id: docRef.id, ...snapshot.data() } as Booking,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : "Booking failed",
+      };
+    }
+  },
+
+  async list(): Promise<Booking[]> {
+    const snap = await getDocs(bookingsRef);
+    return snap.docs.map((d) => ({
+      id: d.id,
+      ...d.data(),
+    })) as Booking[];
   },
 
   async get(id: string): Promise<Booking | null> {
-    try {
-      const body = await requestJson<{ ok: true; data: Booking }>(`/api/bookings/${id}`, { method: "GET" });
-      return body.data;
-    } catch {
-      return null;
-    }
-  },
-
-  async create(input: CreateBookingInput): Promise<Result<Booking>> {
-    try {
-      const body = await requestJson<{ ok: true; data: Booking }>("/api/bookings", {
-        method: "POST",
-        body: JSON.stringify(input),
-      });
-      return { ok: true, data: body.data };
-    } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : "Booking failed" };
-    }
-  },
-
-  async updateStatus(id: string, status: BookingStatus): Promise<Result<Booking>> {
-    try {
-      const body = await requestJson<{ ok: true; data: Booking }>(`/api/bookings/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status }),
-      });
-      return { ok: true, data: body.data };
-    } catch (error) {
-      return { ok: false, error: error instanceof Error ? error.message : "Status update failed" };
-    }
-  },
-
-  async remove(id: string): Promise<Result<true>> {
-    return { ok: false, error: "Booking removal is not implemented" };
+    const snap = await getDoc(doc(db, "bookings", id));
+    return snap.exists() ? (snap.data() as Booking) : null;
   },
 };
